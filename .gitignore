@@ -1,0 +1,4 @@
+split_parts/
+*.part
+__pycache__/
+downloads/
