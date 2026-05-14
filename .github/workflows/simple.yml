@@ -1,22 +1,43 @@
-name: Simple Downloader
+name: دانلود و تقسیم خودکار به قطعات 90 مگابایتی
 
 on:
   workflow_dispatch:
     inputs:
       url:
-        description: 'لینک فایل'
+        description: 'لینک فایل برای دانلود'
         required: true
         type: string
 
 jobs:
-  download:
+  download-and-split:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Download file
-        run: curl -L -o downloaded-file "${{ github.event.inputs.url }}"
-      
-      - name: Upload artifact
+      - name: دانلود فایل
+        run: |
+          curl -L -o original-file "${{ github.event.inputs.url }}"
+          echo "فایل دانلود شد"
+          ls -lh original-file
+
+      - name: نصب ابزار split
+        run: sudo apt-get install -y coreutils
+
+      - name: تقسیم فایل به قطعات 90 مگابایتی
+        run: |
+          mkdir -p parts
+          split -b 90m -d -a 3 original-file parts/part_
+          echo "تعداد قطعات ساخته شده:"
+          ls -lh parts/
+
+      - name: فشرده‌سازی قطعات (برای دانلود راحت‌تر)
+        run: |
+          cd parts
+          zip -r ../all-parts.zip .
+          cd ..
+
+      - name: آپلود قطعات به عنوان Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: my-file
-          path: downloaded-file
+          name: downloaded-parts
+          path: all-parts.zip
+          retention-days: 7
