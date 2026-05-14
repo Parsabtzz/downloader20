@@ -1,4 +1,4 @@
-name: دانلود و تقسیم فایل
+name: دانلود فایل
 
 on:
   workflow_dispatch:
@@ -12,18 +12,15 @@ jobs:
   download:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
+      - name: نصب پایتون
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Install
+      - name: نصب کتابخانه
         run: pip install requests tqdm
 
-      - name: Download
+      - name: دانلود فایل
         run: |
           python -c "
 import requests
@@ -37,11 +34,12 @@ with open(name, 'wb') as f:
         for chunk in r.iter_content(8192):
             f.write(chunk)
             pbar.update(len(chunk))
-print('done:', name)
+print('ذخیره شد:', name)
 "
-      - name: Split and Upload
+
+      - name: آپلود فایل
         uses: actions/upload-artifact@v4
         with:
-          name: downloaded-parts
+          name: downloaded-file
           path: ./
           retention-days: 7
