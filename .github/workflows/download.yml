@@ -4,92 +4,44 @@ on:
   workflow_dispatch:
     inputs:
       url:
-        description: 'لینک فایل برای دانلود'
+        description: 'لینک فایل'
         required: true
-        type: string
-      part_size:
-        description: 'اندازه هر بخش (مگابایت)'
-        required: false
-        default: '90'
         type: string
 
 jobs:
-  download-and-split:
+  download:
     runs-on: ubuntu-latest
-    
     steps:
-    - name: بررسی وجود مخزن
-      uses: actions/checkout@v4
-    
-    - name: نصب پایتون
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-    
-    - name: نصب کتابخانه‌ها
-      run: |
-        pip install requests tqdm
-    
-    - name: دانلود فایل
-      run: |
-        python -c "
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install
+        run: pip install requests tqdm
+
+      - name: Download
+        run: |
+          python -c "
 import requests
 from tqdm import tqdm
-import os
-
 url = '${{ github.event.inputs.url }}'
-filename = url.split('/')[-1]
-if '?' in filename:
-    filename = filename.split('?')[0]
-
-print(f'شروع دانلود: {filename}')
-response = requests.get(url, stream=True)
-total_size = int(response.headers.get('content-length', 0))
-
-with open(filename, 'wb') as f:
-    with tqdm(total=total_size, unit='B', unit_scale=True) as pbar:
-        for chunk in response.iter_content(chunk_size=8192):
+name = url.split('/')[-1].split('?')[0]
+r = requests.get(url, stream=True)
+total = int(r.headers.get('content-length', 0))
+with open(name, 'wb') as f:
+    with tqdm(total=total, unit='B', unit_scale=True) as pbar:
+        for chunk in r.iter_content(8192):
             f.write(chunk)
             pbar.update(len(chunk))
-print(f'دانلود شد: {filename}')
+print('done:', name)
 "
-    
-    - name: تقسیم فایل به قطعات
-      run: |
-        python -c "
-import os
-import math
-
-# پیدا کردن فایل دانلود شده
-files = [f for f in os.listdir('.') if os.path.isfile(f) and f not in ['.gitignore', 'README.md', '.github']]
-if not files:
-    print('فایلی پیدا نشد')
-    exit(1)
-
-filename = files[0]
-file_size = os.path.getsize(filename)
-part_size_mb = int('${{ github.event.inputs.part_size }}')
-part_size = part_size_mb * 1024 * 1024
-num_parts = math.ceil(file_size / part_size)
-
-os.makedirs('split_parts', exist_ok=True)
-
-print(f'تقسیم {filename} به {num_parts} بخش')
-
-with open(filename, 'rb') as f:
-    for i in range(num_parts):
-        part_file = f'split_parts/part_{i+1:03d}.part'
-        chunk = f.read(part_size)
-        with open(part_file, 'wb') as part_f:
-            part_f.write(chunk)
-        print(f'بخش {i+1} از {num_parts} ساخته شد')
-
-print(f'تمام بخش‌ها در پوشه split_parts ذخیره شدند')
-"
-    
-    - name: آپلود قطعات
-      uses: actions/upload-artifact@v4
-      with:
-        name: downloaded-parts
-        path: split_parts/
-        retention-days: 7
+      - name: Split and Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: downloaded-parts
+          path: ./
+          retention-days: 7
