@@ -1,0 +1,22 @@
+name: Simple Downloader
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'لینک فایل'
+        required: true
+        type: string
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download file
+        run: curl -L -o downloaded-file "${{ github.event.inputs.url }}"
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-file
+          path: downloaded-file
